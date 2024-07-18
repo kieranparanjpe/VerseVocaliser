@@ -501,7 +501,7 @@ MonoBehaviour:
   estimator: {fileID: 519420034}
   freqText: {fileID: 353459738}
   noteText: {fileID: 565278488}
-  frText: {fileID: 0}
+  frText: {fileID: 2096195092}
   tolPercent: 1
 --- !u!114 &519420034
 MonoBehaviour:

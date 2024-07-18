@@ -14,6 +14,46 @@ using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Complex;
 public class AudioTransformations
 {
+    private float[] hanningWindow;
+    private MathNet.Numerics.LinearAlgebra.Matrix<Complex> stftMatrix;
+    private MathNet.Numerics.LinearAlgebra.Matrix<float> filterbanks;
+    private FastFourierTransform fft;
+
+    private int numberChunks;
+    
+    private int nFFT;
+    private int windowSize;
+    private int hopLength;
+    private int sampleRate;
+    private int nMels;
+    
+
+    public AudioTransformations(int length, int nFFT, int windowSize, int hopLength, int sampleRate, int nMels)
+    {
+        this.nFFT = nFFT;
+        this.windowSize = windowSize;
+        this.hopLength = hopLength;
+        this.sampleRate = sampleRate;
+        this.nMels = nMels;
+        
+        this.numberChunks = (length) / hopLength + 1;
+
+        
+        hanningWindow = HanningWindow(this.windowSize);
+        stftMatrix = new DenseMatrix(windowSize/2+1, this.numberChunks);
+        fft = new FastFourierTransform(this.nFFT);
+        filterbanks = MelFilterbanks_T(this.nFFT, this.sampleRate, this.nMels);
+
+    }
+    
+    
+    public MathNet.Numerics.LinearAlgebra.Matrix<float> MelSpectrogram(float[] signal)
+    {
+        MathNet.Numerics.LinearAlgebra.Matrix<float> spectrogram = Spectrogram(signal);
+
+        return filterbanks.Multiply(spectrogram);
+    } 
+    
     public static MathNet.Numerics.LinearAlgebra.Matrix<float> MelSpectrogram(float[] signal, int nFFT, int windowSize, int hopLength, int sampleRate, int nMels)
     {
         MathNet.Numerics.LinearAlgebra.Matrix<float> spectrogram = Spectrogram(signal, nFFT, windowSize, hopLength);
@@ -111,6 +151,33 @@ public class AudioTransformations
         return stft;
     }
     
+    public MathNet.Numerics.LinearAlgebra.Matrix<float> Spectrogram(float[] signal)
+    {
+        Profiler.BeginSample("stft");
+        MathNet.Numerics.LinearAlgebra.Matrix<Complex> stft = STFT(signal);
+        Profiler.EndSample();
+        
+        Profiler.BeginSample("compute stft square mag");
+        MathNet.Numerics.LinearAlgebra.Matrix<float> spectrogramFloat = new MathNet.Numerics.LinearAlgebra.Single.DenseMatrix(stft.RowCount, stft.ColumnCount); //4
+        stft.MapConvert(x => (float)x.MagnitudeSquared(), spectrogramFloat, Zeros.Include);
+        Profiler.EndSample();
+        
+        return spectrogramFloat;
+    }
+
+
+    private static float[] HanningWindow(int n)
+    {
+        float[] window = new float[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            window[i] = 0.5f - 0.5f * Mathf.Cos(2.0f * Mathf.PI * i / n);
+        }
+
+        return window;
+    }
+    
     public static MathNet.Numerics.LinearAlgebra.Matrix<Complex> STFT(float[] signal, int nFFT, int windowSize, int hopLength)
     {
         if (nFFT > signal.Length)
@@ -124,6 +191,8 @@ public class AudioTransformations
         
         MathNet.Numerics.LinearAlgebra.Matrix<Complex> stftMatrix = new DenseMatrix(windowSize/2+1, numberChunks);
         
+        var fft = new FastFourierTransform(nFFT);
+
         for (int i = 0; i < numberChunks; i++)
         {
             if (i * hopLength + windowSize >= signal.Length)
@@ -143,7 +212,6 @@ public class AudioTransformations
             Complex[] chunkComplex = Array.ConvertAll(chunk, x => new Complex(x, 0));
             
             Profiler.BeginSample("fft");
-            var fft = new FastFourierTransform(nFFT);
             fft.Forward(chunkComplex);
             Profiler.EndSample();
             
@@ -155,18 +223,41 @@ public class AudioTransformations
         return stftMatrix;
     }
 
-    private static float[] HanningWindow(int n)
+    public MathNet.Numerics.LinearAlgebra.Matrix<Complex> STFT(float[] signal)
     {
-        float[] window = new float[n];
-
-        for (int i = 0; i < n; i++)
+        if (nFFT > signal.Length)
+            throw new ArgumentOutOfRangeException("nFFT must be less than or equal to signal length");
+        
+        signal = PadReflect(signal, windowSize / 2);
+        
+        for (int i = 0; i < numberChunks; i++)
         {
-            window[i] = 0.5f - 0.5f * Mathf.Cos(2.0f * Mathf.PI * i / n);
+            if (i * hopLength + windowSize >= signal.Length)
+                continue;
+            
+            Complex[] chunkComplex = new Complex[windowSize];
+            
+            for (int j = i * hopLength; j < i * hopLength + windowSize; j++)
+            {
+                int zeroIndex = j - i * hopLength;
+                chunkComplex[zeroIndex] = new Complex(hanningWindow[zeroIndex] * signal[j], 0);
+            }
+
+            if (nFFT < chunkComplex.Length)
+                Array.Resize(ref chunkComplex, nFFT);
+            
+            Profiler.BeginSample("fft");
+            fft.Forward(chunkComplex);
+            Profiler.EndSample();
+            
+            for (int r = 0; r < stftMatrix.RowCount; r++)
+            {
+                stftMatrix[r, i] = chunkComplex[r];
+            }
         }
-
-        return window;
+        return stftMatrix;
     }
-
+    
     private static float[] PadReflect(float[] array, int n)
     {
         if (n >= array.Length)
