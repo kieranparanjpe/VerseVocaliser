@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FftFlat</name>
+    </assembly>
+    <members>
+        <member name="T:FftFlat.FastFourierTransform">
+            <summary>
+            Performs fast Fourier transform (FFT).
+            </summary>
+        </member>
+        <member name="M:FftFlat.FastFourierTransform.#ctor(System.Int32)">
+            <summary>
+            Initializes the FFT with the given length.
+            </summary>
+            <param name="length">The length of the FFT.</param>
+            <remarks>
+            The FFT length must be a power of two.
+            </remarks>
+        </member>
+        <member name="M:FftFlat.FastFourierTransform.Forward(System.Span{System.Numerics.Complex})">
+            <summary>
+            Performs forward FFT in-place.
+            </summary>
+            <param name="samples">The samples to be transformed.</param>
+        </member>
+        <member name="M:FftFlat.FastFourierTransform.Inverse(System.Span{System.Numerics.Complex})">
+            <summary>
+            Performs inverse FFT in-place.
+            </summary>
+            <param name="spectrum">The spectrum to be transformed.</param>
+        </member>
+        <member name="P:FftFlat.FastFourierTransform.Length">
+            <summary>
+            The length of the FFT.
+            </summary>
+        </member>
+        <member name="T:FftFlat.RealFourierTransform">
+            <summary>
+            Performs real Fourier transform.
+            </summary>
+        </member>
+        <member name="M:FftFlat.RealFourierTransform.#ctor(System.Int32)">
+            <summary>
+            Initializes the real FFT with the given length.
+            </summary>
+            <param name="length">The length of the FFT.</param>
+            <remarks>
+            The FFT length must be even and a power of two.
+            </remarks>
+        </member>
+        <member name="M:FftFlat.RealFourierTransform.Forward(System.Span{System.Double})">
+            <summary>
+            Performs forward real FFT in-place.
+            </summary>
+            <param name="samples">The samples to be transformed.</param>
+            <returns>
+            Returns the view of the results as a <see cref="T:System.Span`1"/> of <see cref="T:System.Numerics.Complex"/> after the FFT is performed in-place.
+            This view can be used when performing an inverse transform.
+            </returns>
+            <remarks>
+            The length of the <paramref name="samples"/> must be the FFT length + 2.
+            The last two elements of the <paramref name="samples"/> are used to store the Nyquist frequency component after the forward transform.
+            These two elements are ignored in the forward transform.
+            </remarks>
+        </member>
+        <member name="M:FftFlat.RealFourierTransform.Inverse(System.Span{System.Numerics.Complex})">
+            <summary>
+            Performs inverse real FFT in-place.
+            </summary>
+            <param name="spectrum">The spectrum to be transformed.</param>
+            <returns>
+            Returns the view of the results as a <see cref="T:System.Span`1"/> of <see cref="T:System.Double"/> after the inverse FFT is performed in-place.
+            The length of this view is the FFT length + 2. The last two elements are cleared to zero.
+            </returns>
+            /// <remarks>
+            The length of the <paramref name="spectrum"/> must be the FFT length / 2 + 1.
+            </remarks>
+        </member>
+        <member name="P:FftFlat.RealFourierTransform.Length">
+            <summary>
+            The length of the FFT.
+            </summary>
+        </member>
+    </members>
+</doc>
