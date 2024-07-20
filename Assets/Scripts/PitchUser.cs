@@ -11,13 +11,15 @@ public class PitchUser : MonoBehaviour
     public TextMeshProUGUI noteText;
     public TextMeshProUGUI frText;
 
+    [SerializeField] private int microphoneDeviceIndex = 1;
+
     public float tolPercent;
     // Start is called before the first frame update
     void Start()
     {
-        estimator.ShowMicrophoneDevices();
-        estimator.BeginMicrophoneStream(0).AttachStreamToAudioSource().InvokeUpdateNote(0.01f);
-        
+        MicrophoneListener.Instance.BeginMicrophoneStream(microphoneDeviceIndex, 1, 16000)
+            .AttachStreamToAudioSource(GetComponent<AudioSource>());
+        //estimator.InvokeUpdateNote(0.01f, GetComponent<AudioSource>());
     }
 
     // Update is called once per frame
@@ -30,8 +32,7 @@ public class PitchUser : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Q))
         {
-            estimator.EndMicrophoneStream();
-            estimator.DetachStreamFromAudioSource();
+            
         }
     }
 }

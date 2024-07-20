@@ -16,13 +16,13 @@ public class MicrophoneInference : MonoBehaviour
     public NNModel modelAsset;
     private Model m_RuntimeModel;
     private IWorker m_Worker;
-
-    private AudioClip clip;
     public RawImage rawImage;
+
+    [SerializeField] private int microphoneDeviceIndex = 1;
 
     private int sampleOffset = 0;
     private int samplesPerClip = 16000 * 10;
-    private int samplesPerUpdate = 500;
+    private int samplesPerUpdate = 2000;
     private int samplesPerChunk = 8000;
     private int sampleRate = 16000;
     
@@ -36,12 +36,7 @@ public class MicrophoneInference : MonoBehaviour
     
     void Start()
     {
-        int microphoneDeviceIndex = 0;
-        if (microphoneDeviceIndex >= Microphone.devices.Length || microphoneDeviceIndex < 0)
-            Debug.LogError($"Microphone Device Index of {microphoneDeviceIndex} is not a valid microphone index.");
-        
-        string microphoneName = Microphone.devices[microphoneDeviceIndex];
-        clip = Microphone.Start(microphoneName, true, samplesPerClip / sampleRate, 16000);
+        MicrophoneListener.Instance.BeginMicrophoneStream(microphoneDeviceIndex, 10, 16000);
         
         m_RuntimeModel = ModelLoader.Load(modelAsset);
         m_Worker = WorkerFactory.CreateWorker(WorkerFactory.Type.PixelShader, m_RuntimeModel);
@@ -55,7 +50,7 @@ public class MicrophoneInference : MonoBehaviour
     {
         Profiler.BeginSample("infer");
         float[] data = new float[samplesPerUpdate];
-        clip.GetData(data, sampleOffset % samplesPerClip);
+        MicrophoneListener.Instance.microphoneStream.GetData(data, sampleOffset % samplesPerClip);
         sampleOffset += samplesPerUpdate;
         
         foreach (float d in data)
@@ -93,7 +88,7 @@ public class MicrophoneInference : MonoBehaviour
         m_Worker.Execute(input);
         Tensor output = m_Worker.PeekOutput();
 
-        Debug.Log(output.Flatten() + " " + string.Join(" ", output.ArgMax()));
+        //Debug.Log(output.Flatten() + " " + string.Join(" ", output.ArgMax()));
         inferenceText.text = classMapping[output.ArgMax()[0]];
         input.Dispose();
         Profiler.EndSample();

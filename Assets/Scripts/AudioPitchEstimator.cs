@@ -6,13 +6,10 @@ using UnityEngine.Serialization;
 
 // Fundamental frequency estimation by SRH (Summation of Residual Harmonics)
 // T. Drugman and A. Alwan: "Joint Robust Voicing Detection and Pitch Estimation Based on Residual Harmonics", Interspeech'11, 2011.
-// Adapted by Kieran Paranjpe for use in The Verse
+// Adapted by Kieran Paranjpe for use in The Verse in July 2024
 
 public class AudioPitchEstimator : MonoBehaviour
 {
-    [Range(16000, 96000)]
-    [SerializeField] private int sampleRate = 44100;
-    
     [Tooltip("Minimum frequency [Hz]")]
     [Range(0, 150)]
     [SerializeField] private int frequencyMin = 40;
@@ -45,9 +42,6 @@ public class AudioPitchEstimator : MonoBehaviour
     
     public float TolerancePercent = 0;
     
-    private int microphoneDeviceIndex = 0;
-    private AudioClip microphoneStream = null;
-
     public Note CurrentNote { get; private set; } = Note.NONE;
     public float CurrentFrequency { get; private set; } = float.NaN;
 
@@ -70,16 +64,19 @@ public class AudioPitchEstimator : MonoBehaviour
     /// Begin updating the current note and frequency periodically 
     /// </summary>
     /// <param name="updateRate">Amount of time in seconds between updates. Must be greater than or equal to 0.005</param>
+    /// <param name="audioSource">audio source to use</param>
     /// <returns>Itself</returns>
-    public AudioPitchEstimator InvokeUpdateNote(float updateRate)
+    public AudioPitchEstimator InvokeUpdateNote(float updateRate, AudioSource audioSource)
     {
         if (updateRate < 0.005)
             Debug.LogError("Update Rate is too low.");
 
+        Source = audioSource;
         InvokeRepeating("UpdateNote", 0, updateRate);
         
         return this;
     }
+
     /// <summary>
     /// End updating the current note and frequency periodically 
     /// </summary>
@@ -87,101 +84,7 @@ public class AudioPitchEstimator : MonoBehaviour
     {
         CancelInvoke("UpdateNote");
     }
-    /// <summary>
-    /// Begin updating an AudioClip with the data from microphone. Does not attach to an AudioSource.
-    /// </summary>
-    /// <param name="device">Microphone Device to use.</param>
-    /// <returns>Itself</returns>
-    public AudioPitchEstimator BeginMicrophoneStream(int device)
-    {
-        microphoneDeviceIndex = device;
-        if (microphoneDeviceIndex >= Microphone.devices.Length || microphoneDeviceIndex < 0)
-            Debug.LogError($"Microphone Device Index of {microphoneDeviceIndex} is not a valid microphone index.");
-        
-        string microphoneName = Microphone.devices[microphoneDeviceIndex];
-        microphoneStream = Microphone.Start(microphoneName, true, 1, sampleRate);
-        return this;
-    }
-
-    /// <summary>
-    /// End updating an AudioClip with the data from microphone. Does not detach from AudioSource.
-    /// </summary>
-    public void EndMicrophoneStream()
-    {
-        if (microphoneDeviceIndex >= Microphone.devices.Length || microphoneDeviceIndex < 0)
-            Debug.LogError($"Microphone Device Index of {microphoneDeviceIndex} is not a valid microphone index.");
-        string microphoneName = Microphone.devices[microphoneDeviceIndex];
-        Microphone.End(microphoneName);
-        microphoneStream = null;
-    }
     
-    /// <summary>
-    /// Prints out the microphone devices available.
-    /// </summary>
-    public void ShowMicrophoneDevices()
-    {
-        Debug.Log("Microphone Options: " + string.Join(',', Microphone.devices));
-    }
-
-    /// <summary>
-    /// Attach the microphone stream to audio source. Audio source will be the source attached to this object, or will throw error if there is not AudioSource on this object.
-    /// </summary>
-    /// <returns>Itself</returns>
-    public AudioPitchEstimator AttachStreamToAudioSource()
-    {
-        if (Source == null)
-        {
-            Source = GetComponent<AudioSource>();
-            if (Source == null)
-                Debug.LogError("Could not find an Audio Source to attach to!");
-        }
-        if (microphoneStream == null)
-            Debug.LogError("Microphone Stream is null");
-        
-        Source.clip = microphoneStream;
-        Source.Play();
-        Source.loop = true;
-
-        return this;
-    }
-    /// <summary>
-    /// Attach the microphone stream to audio source.
-    /// </summary>
-    /// <param name="source">Audio Source to attach to</param>>
-    /// <returns>Itself</returns>
-    public AudioPitchEstimator AttachStreamToAudioSource(AudioSource source)
-    {
-        Source = source;
-        if (Source == null)
-        {
-            Source = GetComponent<AudioSource>();
-            if (Source == null)
-                Debug.LogError("Could not find an Audio Source to attach to!");
-        }
-        if (microphoneStream == null)
-            Debug.LogError("Microphone Stream is null");
-        
-        Source.clip = microphoneStream;
-        Source.Play();
-        Source.loop = true;
-
-        return this;
-    }
-
-    /// <summary>
-    /// Detach current microphone stream from audio source.
-    /// </summary>
-    public void DetachStreamFromAudioSource()
-    {
-        if (Source == null)
-        {
-            Debug.LogError("Could not find an Audio Source to detach from!");
-        }
-        Source.clip = null;
-        Source.loop = false;
-        Source.Stop();
-    }
-
     /// <summary>
     /// Estimate the fundamental frequency
     /// </summary>
