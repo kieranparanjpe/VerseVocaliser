@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class MicrophoneListener
 {
-    private AudioSource Source = null;
+    public AudioSource Source { get; private set; } = null;
     private int microphoneDeviceIndex = 0;
     public AudioClip microphoneStream { get; private set; } = null;
 

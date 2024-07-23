@@ -8,7 +8,7 @@ using UnityEngine.Serialization;
 // T. Drugman and A. Alwan: "Joint Robust Voicing Detection and Pitch Estimation Based on Residual Harmonics", Interspeech'11, 2011.
 // Adapted by Kieran Paranjpe for use in The Verse in July 2024
 
-public class AudioPitchEstimator : MonoBehaviour
+public class PitchEstimator : MonoBehaviour
 {
     [Tooltip("Minimum frequency [Hz]")]
     [Range(0, 150)]
@@ -38,12 +38,12 @@ public class AudioPitchEstimator : MonoBehaviour
 
     private List<float> SRH => new List<float>(srh);
 
-    public AudioSource Source = null;
+    [SerializeField] private AudioSource audioSource = null;
     
     public float TolerancePercent = 0;
     
-    public Note CurrentNote { get; private set; } = Note.NONE;
-    public float CurrentFrequency { get; private set; } = float.NaN;
+    public static Note CurrentNote { get; private set; } = Note.NONE;
+    public static float CurrentFrequency { get; private set; } = float.NaN;
 
     /// <summary>
     /// Each frequency of piano notes from A0 - C8 in order.
@@ -60,18 +60,27 @@ public class AudioPitchEstimator : MonoBehaviour
         3729.31f, 3951.07f, 4186.01f
     };
 
+    public void Initialise(int microphoneDeviceIndex, int clipLength, int sampleRate)
+    {
+        if (MicrophoneListener.Instance.microphoneStream == null)
+            MicrophoneListener.Instance.BeginMicrophoneStream(microphoneDeviceIndex, clipLength, sampleRate);
+        if (MicrophoneListener.Instance.Source == null)
+            MicrophoneListener.Instance.AttachStreamToAudioSource(audioSource);
+        InvokeUpdateNote(0.01f, audioSource);
+    }
+
     /// <summary>
     /// Begin updating the current note and frequency periodically 
     /// </summary>
     /// <param name="updateRate">Amount of time in seconds between updates. Must be greater than or equal to 0.005</param>
     /// <param name="audioSource">audio source to use</param>
     /// <returns>Itself</returns>
-    public AudioPitchEstimator InvokeUpdateNote(float updateRate, AudioSource audioSource)
+    public PitchEstimator InvokeUpdateNote(float updateRate, AudioSource audioSource)
     {
         if (updateRate < 0.005)
             Debug.LogError("Update Rate is too low.");
 
-        Source = audioSource;
+        audioSource = audioSource;
         InvokeRepeating("UpdateNote", 0, updateRate);
         
         return this;
@@ -195,10 +204,10 @@ public class AudioPitchEstimator : MonoBehaviour
     
     private void UpdateNote()
     {
-        if (Source == null)
+        if (audioSource == null)
             Debug.LogError("There is no audio source");
         
-        CurrentFrequency = EstimateFrequency(Source);
+        CurrentFrequency = EstimateFrequency(audioSource);
         
         if (float.IsNaN(CurrentFrequency))
         {
