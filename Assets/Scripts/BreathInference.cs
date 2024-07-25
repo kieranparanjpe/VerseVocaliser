@@ -11,6 +11,8 @@ using TMPro;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 
+//somewhere this script has a lot of delay ~0.5 seconds from when you make a sound and it computes spectrogram. More and more i think AudioTransformations needs to be done in C.
+
 /// <summary>
 /// This class is used for getting the current breath state using Microphone Input and an ML model in ONNX form
 /// To get the breath state from another class, access static variables BreathClassification and BreathClassificationCertainty
@@ -26,10 +28,12 @@ public class BreathInference : MonoBehaviour
     [SerializeField] private RawImage debugSpectrogramImage;
     
     // data should be the same as what was used for training the model. sample rate will be changed by BreathInputHandler
+    [SerializeField] int samplesPerUpdate = 2000;        
+    [SerializeField] private int samplesPerChunk = 8000;
+    [SerializeField] private int nFFT = 2048;
+    
     private int sampleOffset = 0;
     private int samplesPerClip = 16000 * 10;
-    private int samplesPerUpdate = 2000;
-    private int samplesPerChunk = 8000;
     private int sampleRate = 16000;
     
     private Queue<float> audioData = new Queue<float>();
@@ -112,13 +116,13 @@ public class BreathInference : MonoBehaviour
     {
         Texture2D tex = new Texture2D(img.ColumnCount, img.RowCount);
         float max = img.ToRowMajorArray().Max();
-
+        print(max);
         // Apply the color array to the texture
         for (int y = 0; y < tex.height; y++)
         {
             for (int x = 0; x < tex.width; x++)
             {
-                float c = img[y, x] / max;
+                float c = img[y, x] / 1;
                 tex.SetPixel(x, y, new Color(c, c, c));
             }
         }

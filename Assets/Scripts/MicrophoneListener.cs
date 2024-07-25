@@ -64,6 +64,9 @@ public class MicrophoneListener
     /// <returns>Itself</returns>
     public MicrophoneListener AttachStreamToAudioSource(AudioSource source)
     {
+        if(Source != null)
+            DetachStreamFromAudioSource();
+        
         Source = source;
         if (Source == null)
         {

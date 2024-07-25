@@ -829,8 +829,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 576d836cfcca5a049b91901c8de4c1e3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  audioAsset: {fileID: 5022602860645237092, guid: 70b2187f6f131244db02396eadb921d6, type: 3}
+  audioAsset: {fileID: 5022602860645237092, guid: 6ce65e19d90de124d9d0dbe27d3ffb01, type: 3}
   debugSpectrogramImage: {fileID: 1247029626}
+  samplesPerUpdate: 512
+  samplesPerChunk: 4096
+  nFFT: 4096
 --- !u!114 &1061781048
 MonoBehaviour:
   m_ObjectHideFlags: 0
